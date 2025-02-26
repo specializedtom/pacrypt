@@ -1,5 +1,5 @@
 {
-    "name": "postfixadmin/password-hashing",
+    "name": "specializedtom/pacrypt",
     "description": "Routines to generate password hashes, useful for Dovecot or Courier Mail servers",
     "type": "library",
     "require": {
