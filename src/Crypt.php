@@ -30,6 +30,7 @@ class Crypt
         'CRYPT',  // anything crypt() can cope with, optional {CRYPT} prefix, new hashes will use CRYPT_BLOWFISH
         'SYSTEM', // DES CRYPT, probably best to avoid
         'PLAIN', 'CLEAR', 'CLEARTEXT',
+        'AES-256'
     ];
 
     public function __construct(string $algorithm)
@@ -52,7 +53,7 @@ class Crypt
      *
      * @throws Exception
      */
-    public function crypt(string $clearText, ?string $passwordHash = null): string
+    public function crypt(string $clearText, ?string $passwordHash = null, ?string $key = null): string
     {
         if (is_string($passwordHash) && empty($passwordHash)) {
             $passwordHash = null;
@@ -146,11 +147,37 @@ class Crypt
                     return $clearText;
                 }
                 return '{' . $algorithm . '}' . $clearText;
+            case 'AES-256':
+                if (!is_null($key)) {
+                    if (!empty($passwordHash)) {
+                        if ($passwordHash == "{{$algorithm}}$clearText") {
+                            return $passwordHash;
+                        }
+                        return $clearText;
+                    }
+                    return '{' . $algorithm . '}' . $this->encryptAES256($clearText, $key);
+                }
         }
 
         throw new \LogicException("Supported hash, but not implemented?");
     }
 
+
+    public function encryptAES256(string $clearText, string $key): string
+    {
+        if (strlen($key) !== 32) {
+            throw new Exception("Key must be 32 bytes long for AES-256");
+        }
+        $cipher = 'aes-256-cbc';
+        $ivlen = openssl_cipher_iv_length($cipher);
+        $iv = openssl_random_pseudo_bytes($ivlen);
+        $encrypted = openssl_encrypt($clearText, $cipher, $key, 0, $iv);
+        if ($encrypted === false) {
+            throw new Exception("Encryption failed");
+        }
+        return base64_encode($iv . $encrypted);
+    }
+    
     public function hashSha1(string $clearText, string $algorithm = 'SHA1'): string
     {
         $hash = hash('sha1', $clearText, true);
