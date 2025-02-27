@@ -150,7 +150,7 @@ class Crypt
             case 'AES-256':
                 if (!is_null($key)) {
                     if (!empty($passwordHash)) {
-                        $checkHash = substr(passwordHash, strlen($algorithm) + 2);
+                        $checkHash = substr($passwordHash, strlen($algorithm) + 2);
                         if ($this->decryptAES256($checkHash, $key) == $clearText) {
                             return $passwordHash;
                         }
