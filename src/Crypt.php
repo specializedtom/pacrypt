@@ -150,7 +150,8 @@ class Crypt
             case 'AES-256':
                 if (!is_null($key)) {
                     if (!empty($passwordHash)) {
-                        if ($passwordHash == "{{$algorithm}}$clearText") {
+                        $checkHash = substr(passwordHash, strlen($algorithm) + 2);
+                        if ($this->decryptAES256($checkHash, $key) == $clearText) {
                             return $passwordHash;
                         }
                         return $clearText;
@@ -177,6 +178,28 @@ class Crypt
             throw new Exception('Encryption failed');
         }
         return base64_encode($iv . $ciphertext);
+    }
+
+    public function decryptAES256(string $encPWBase64, string $aesKey): string
+    {
+        $key = base64_decode($aesKey);
+        if (strlen($key) !== 32) {
+            throw new Exception("Key must be 32 bytes long for AES-256");
+        }
+        $encData = base64_decode($encPWBase64);
+        $cipher = 'aes-256-cbc';
+        $ivLength = openssl_cipher_iv_length($cipher);
+        if (strlen($encData) < $ivLength) {
+            throw new Exception('Invalid encrypted data');
+        }
+        $iv = substr($encData, 0, $ivLength);
+        $ciphertext = substr($encData, $ivLength);
+        $decrypted = openssl_decrypt($ciphertext, $cipher, $key, 0, $iv);
+        if ($decrypted === false) {
+            throw new Exception('Decryption failed');
+        }
+
+        return $decrypted;
     }
     
     public function hashSha1(string $clearText, string $algorithm = 'SHA1'): string
