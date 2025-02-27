@@ -163,19 +163,30 @@ class Crypt
     }
 
 
-    public function encryptAES256(string $clearText, string $key): string
+    public function encryptAES256(string $clearText, string $aesKey): string
     {
-        if (strlen($key) !== 32) {
-            throw new Exception("Key must be 32 bytes long for AES-256");
+        $salt = random_bytes(8);
+        $keyIv = openssl_pbkdf2(
+            $aeskey,
+            $salt,
+            48,        // Key + IV length
+            100000,    // Iterations
+            'sha256'   // Hash algorithm
+        );
+        $key = substr($keyIv,0,32);
+        $iv = substr($keyIv,32,16);
+        $ciphertext = openssl_encrypt(
+            $clearText,
+            'aes-256-cbc',
+            $key,
+            OPENSSL_RAW_DATA, // Raw data mode
+            $iv
+        );
+        if ($ciphertext === false) {
+            throw new exception("Encryption failed: ". openssl_error_string());
         }
-        $cipher = 'aes-256-cbc';
-        $ivlen = openssl_cipher_iv_length($cipher);
-        $iv = openssl_random_pseudo_bytes($ivlen);
-        $encrypted = openssl_encrypt($clearText, $cipher, $key, 0, $iv);
-        if ($encrypted === false) {
-            throw new Exception("Encryption failed");
-        }
-        return base64_encode($iv . $encrypted);
+        $encrypted = 'Salted__' . $salt . $ciphertext;
+        return base64_encode($encrypted);
     }
     
     public function hashSha1(string $clearText, string $algorithm = 'SHA1'): string
